@@ -29,9 +29,8 @@ class Bindings:
         if cons_cell == None:
             print "%s Unbound"%var
             exit(1)
-        binding = cons_cell.car.find(var);
-        if binding != None:
-            return binding
+        if(var in cons_cell.car.bindings):
+            return cons_cell.car.find(var);
         return Bindings.of(var,cons_cell.cdr)
     
     @classmethod
@@ -89,8 +88,7 @@ class Form:
     def create(cls,tree):
         if isinstance(tree,list):
             cell = None;
-            tree.reverse();
-            for element in tree:
+            for element in reversed(tree):
                 cell = ConsCell(Form.create(element),cell)
             return Form(cell)
         if(tree.isdigit()): # I can be sure if its not list it should be a string
@@ -98,12 +96,19 @@ class Form:
         return Var(tree)
     
     def apply(self,bindings,arguments):
-        return self.cell.car.apply(bindings,[]).apply(bindings,self.cell.cdr);
+        return self.cell.car.apply(bindings,None).apply(bindings,self.cell.cdr);
 
     def __str__(self):
         return 'Form<%s>'%str(self.cell)
 
 class Progn:
+    def apply(self,binding,arguments):
+        result = None
+        result = arguments.car.apply(binding,arguments)
+        if(arguments.cdr != None):
+            result = self.apply(binding,arguments.cdr);
+        return result
+            
     @classmethod
     def execute(cls,tree,binding):
         print tree
@@ -176,7 +181,6 @@ class IfCondition:
             then_clause = then_clause.car
         if(isinstance(else_clause,ConsCell)):
             else_clause = else_clause.car
-        print str(then_clause)+" or "+str(else_clause)
         if(arguments.car.apply(bindings,arguments) != 0):
             return then_clause.apply(bindings,arguments);
         return else_clause.apply(bindings,arguments);
@@ -194,6 +198,30 @@ class Function:
             Bindings.add(new_bindings,self.parameters[i].name,arguments[i].apply(bindings,[]))
         return self.body.apply(new_bindings,None)
             
+class List:
+    def apply(self,bindings,arguments):
+        current = None
+        if(arguments != None):
+            for item in reversed(arguments.as_tuple()):
+                current = ConsCell(item.apply(bindings,arguments),current)
+        return current;
+
+class Car:
+    def apply(self,bindings,arguments):
+        return arguments.car.apply(bindings,arguments).car
+
+class Cdr:
+    def apply(self,bindings,arguments):
+        return arguments.car.apply(bindings,arguments).cdr
+
+class Cons:
+    def apply(self,bindings,arguments):
+        return ConsCell(arguments.car.apply(bindings,arguments),\
+arguments.cdr.car.apply(bindings,arguments))
+
+class Nil:
+    def apply(self,bindings,arguments):
+        return arguments.car.apply(bindings,arguments) == None
 
 if __name__ == '__main__':
     program = open(sys.argv[1],'r').read();
@@ -208,5 +236,11 @@ if __name__ == '__main__':
     Bindings.add(root_bindings,'print',Print())
     Bindings.add(root_bindings,'defn',DefineFunction())
     Bindings.add(root_bindings,'fn', AnonymousFunction())
+    Bindings.add(root_bindings,'progn',Progn())
     Bindings.add(root_bindings,'if',IfCondition())
+    Bindings.add(root_bindings,'list',List())
+    Bindings.add(root_bindings,'car',Car())
+    Bindings.add(root_bindings,'cdr',Cdr())
+    Bindings.add(root_bindings,'cons',Cons())
+    Bindings.add(root_bindings,'nil?',Nil())
     Progn.execute(tree,root_bindings)
