@@ -27,12 +27,12 @@ class Bindings:
     @classmethod
     def of(cls,var,cons_cell):
         if cons_cell == None:
-            print "Cant find bindings for "+str(var)
+            print "%s Unbound"%var
             exit(1)
         binding = cons_cell.car.find(var);
-        if binding:
+        if binding != None:
             return binding
-        return  Bindings.of(var,cons_cell.cdr)
+        return Bindings.of(var,cons_cell.cdr)
     
     @classmethod
     def add(cls,bindings,name,value):
@@ -159,15 +159,36 @@ class DefineFunction:
         name = arguments.car.name 
         functionarguments = arguments.cdr.car.cell
         body = arguments.cdr.cdr.car
-        return Bindings.add_to_root(bindings,name,Function(functionarguments,body));
+        return Bindings.add_to_root(bindings,name,Function(functionarguments,body,bindings));
+
+class AnonymousFunction:
+    def apply(self,bindings,arguments):
+        functionarguments = arguments.car.cell
+        body = arguments.cdr.car
+        return Function(functionarguments,body,bindings);
+
+class IfCondition:
+    def apply(self,bindings,arguments):
+        then_clause = arguments.cdr.car
+        else_clause = arguments.cdr.cdr
+        #they can be Var/Value/Form
+        if(isinstance(then_clause,ConsCell)):
+            then_clause = then_clause.car
+        if(isinstance(else_clause,ConsCell)):
+            else_clause = else_clause.car
+        print str(then_clause)+" or "+str(else_clause)
+        if(arguments.car.apply(bindings,arguments) != 0):
+            return then_clause.apply(bindings,arguments);
+        return else_clause.apply(bindings,arguments);
 
 class Function:
-    def __init__(self,arguments,body):
+    def __init__(self,arguments,body,bindings):
         self.parameters = arguments.as_tuple()
         self.body = body
+        self.definition_bindings = bindings
 
     def apply(self,bindings,arguments):
-        new_bindings = ConsCell(Bindings({}),bindings)
+        new_bindings = ConsCell(Bindings({}),self.definition_bindings)
         arguments = arguments.as_tuple()
         for i in xrange(len(arguments)):
             Bindings.add(new_bindings,self.parameters[i].name,arguments[i].apply(bindings,[]))
@@ -185,5 +206,7 @@ if __name__ == '__main__':
     Bindings.add(root_bindings,'-',Subtraction())
     Bindings.add(root_bindings,'*',Multiplication())
     Bindings.add(root_bindings,'print',Print())
-    Bindings.add(root_bindings,"defn",DefineFunction())
+    Bindings.add(root_bindings,'defn',DefineFunction())
+    Bindings.add(root_bindings,'fn', AnonymousFunction())
+    Bindings.add(root_bindings,'if',IfCondition())
     Progn.execute(tree,root_bindings)
