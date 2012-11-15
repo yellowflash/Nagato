@@ -1,6 +1,8 @@
 Nagato
 ------
-![alt text](http://fc05.deviantart.net/fs71/f/2012/235/e/5/chibi_nagato_uzumaki_by_uchihaclanancestor-d5c7csj.png "Nagato")
+<img src="http://fc05.deviantart.net/fs71/f/2012/235/e/5/chibi_nagato_uzumaki_by_uchihaclanancestor-d5c7csj.png" width="180px" />
+
+
 Nagato is a lisp implementation on my own inspired by Peter norvig's post
 
 http://norvig.com/lispy.html
